@@ -9,26 +9,30 @@ class Stock:
         self.price = price
         self.high_price = price
         self.low_price = price
-        self.buy_orders = set() # todo list or ordered to ensure first buy order gets matched first FIFO
-        self.sell_orders = set() # todo list or ordered to ensure first buy order gets matched first FIFO
+        self.buy_orders = set()  # todo list or ordered to ensure first buy order gets matched first FIFO
+        self.sell_orders = set()  # todo list or ordered to ensure first buy order gets matched first FIFO
 
     # todo add wrapping method to switch between buy/sell
 
-    # todo on sell check if offer price is higher than current price = instant sell
-    # todo      if lower put in sell_orders
+    # todo on sell check if offer price is lower than current price = instant sell
+    # todo      if higher put in sell_orders
 
-    # todo loop to match if there is buy and sell orders matching
+    # todo loop to match if there is buy orders matching
+    # todo loop to match if there is sell orders matching
 
     # todo trending? daily/week high/low?
 
     def add_buy_order(self, neworder):
         # price, volume, player
 
-        # todo on buy check if offer price is lower than current price = instant buy
-        # todo      if higher put in buy_orders
+        # todo on buy check if offer price is higher than current price = instant buy
+        # todo      if lower price put in buy_orders
 
-        #todo maybe change input to keywords
-        #todo add_buy_order(self, price=100, volume=10, player='NPC')
+        # todo maybe change input to keywords
+        # todo add_buy_order(self, price=100, volume=10, player='NPC')
+
+        # todo maybe change to dict id : (price, vol, player) ... might be better for keeping track
+        # todo maybe change to dict (price, player) : vol ... easy to find values
 
         similar_order = self.player_similar_buy_order(neworder)
         if not similar_order:
@@ -51,18 +55,24 @@ class Stock:
         price, volume, player = neworder
         return [order for order in self.player_buy_orders(player) if order[0] == price]
 
+    # todo player cancle order
+    # todo player modify order
+
+    # split order method needed? maybe not if buy orders always take the player credit in escrow
+    # might only be needed if there is support for buy under current price or sell over current price between players
+
     # if price == 0 -> out of buisness -> remove from market?
 
     # stock price history
     # logging?
 
-    # split
+    # split, only needed if I implement limited number of shares
 
 
 class TestStock(unittest.TestCase):
     def setUp(self):
         self.teststock = Stock('testStock', 1000)
-        #price, volume, player
+        # price, volume, player
         self.order = (100, 1, 'NPC')
 
     def test_create_stock(self):
@@ -114,7 +124,6 @@ class TestStock(unittest.TestCase):
         self.assertIn(existing_order3, self.teststock.buy_orders)
         self.assertIn(existing_order3, self.teststock.player_similar_buy_order(new_order))
         print('test_player_similar_buy_order2 passed.')
-
 
     def test_add_duplicate_buy_order(self):
         self.teststock.add_buy_order(self.order)
