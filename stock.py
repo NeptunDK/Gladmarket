@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 __author__ = 'NeptunDK'
 import unittest
+import logging
+from collections import namedtuple
+# import helpers
 
+Order = namedtuple('Order', ['price', 'vol', 'player', 'order_type'])
 
 class Stock:
     def __init__(self, name, price):
@@ -9,21 +13,21 @@ class Stock:
         self.price = price
         self.high_price = price
         self.low_price = price
-        self.buy_orders = set()  # todo list or ordered to ensure first buy order gets matched first FIFO
-        self.sell_orders = set()  # todo list or ordered to ensure first buy order gets matched first FIFO
+        self.orders = {'buy': [], 'sell': []} #hmmm set or list????
 
-    # todo add wrapping method to switch between buy/sell
+    def add_order(self, neworder):
+        similar_order = self.player_similar_order(neworder)
 
-    # todo on sell check if offer price is lower than current price = instant sell
-    # todo      if higher put in sell_orders
-
-    # todo loop to match if there is buy orders matching
-    # todo loop to match if there is sell orders matching
-
-    # todo trending? daily/week high/low?
-
-    def add_buy_order(self, neworder):
-        # price, volume, player
+        if not similar_order:
+            self.orders[neworder.order_type].append(neworder)
+        else:
+            #update similar order
+            current_volume = similar_order[0].vol
+            price, vol, player, order_type = neworder
+            vol += current_volume
+            updated_order = Order(price, vol, player, order_type)
+            self.orders[neworder.order_type].remove(similar_order[0])
+            self.orders[neworder.order_type].append(updated_order)
 
         # todo on buy check if offer price is higher than current price = instant buy
         # todo      if lower price put in buy_orders
@@ -34,24 +38,32 @@ class Stock:
         # todo maybe change to dict id : (price, vol, player) ... might be better for keeping track
         # todo maybe change to dict (price, player) : vol ... easy to find values
 
-        similar_order = self.player_similar_buy_order(neworder)
-        if not similar_order:
-            self.buy_orders.add(neworder)
-        else:
-            _, new_volume, _ = neworder
-            price, volume, player = similar_order[0]
-            updated_order = price, volume + new_volume, player
-            self.remove_buy_order(similar_order[0])
-            self.buy_orders.add(updated_order)
+
+    def player_similar_order(self, Order):
+        return [match for match in self.orders[Order.order_type]
+                if (match.price == Order.price) and (match.player == Order.player)]
+
+
+    # todo on sell check if offer price is lower than current price = instant sell
+    # todo      if higher put in sell_orders
+
+    # todo loop to match if there is buy orders matching
+    # todo loop to match if there is sell orders matching
+
+    # todo trending? daily/week high/low?
+
 
     def remove_buy_order(self, order):
+        #todo need updating to new namedtuple format
         if order in self.buy_orders:
             self.buy_orders.remove(order)
 
     def player_buy_orders(self, player):
+        # todo need updating to new namedtuple format
         return [order for order in self.buy_orders if order[2] == player]
 
     def player_similar_buy_order(self, neworder):
+        # todo need updating to new namedtuple format
         price, volume, player = neworder
         return [order for order in self.player_buy_orders(player) if order[0] == price]
 
@@ -73,7 +85,8 @@ class TestStock(unittest.TestCase):
     def setUp(self):
         self.teststock = Stock('testStock', 1000)
         # price, volume, player
-        self.order = (100, 1, 'NPC')
+        self.buyorder = Order(100, 1, 'NPC', 'buy')
+        self.sellorder = Order(100, 1, 'NPC', 'buy')
 
     def test_create_stock(self):
         self.assertEqual(self.teststock.name, 'testStock') and self.assertEqual(self.teststock.price, 1000)
@@ -85,18 +98,39 @@ class TestStock(unittest.TestCase):
         self.assertEqual(self.teststock.price, 1200)
         print('test_alterprice passed.')
 
+    def test_add_order(self):
+        #setup
+        self.teststock.add_order(Order(100, 5, 'NPC', 'buy'))
+        self.teststock.add_order(Order(200, 5, 'NPC', 'buy'))
+        self.teststock.add_order(Order(100, 5, 'Neptun', 'buy'))
+        self.teststock.add_order(Order(100, 1, 'NPC', 'buy'))
+        #checks
+        self.valid_new_order = Order(100, 6, 'NPC', 'buy')
+        self.assertIn(self.valid_new_order, self.teststock.orders['buy'])
+        self.assertIn(Order(200, 5, 'NPC', 'buy'), self.teststock.orders['buy'])
+        self.assertIn(Order(100, 5, 'Neptun', 'buy'), self.teststock.orders['buy'])
+        self.assertNotIn(Order(100, 5, 'NPC', 'buy'), self.teststock.orders['buy'])
+        self.assertNotIn(Order(100, 1, 'NPC', 'buy'), self.teststock.orders['buy'])
+
+
+
+
+
     def test_add_buy_order(self):
+        # todo need updating to new namedtuple format
         self.teststock.add_buy_order(self.order)
         self.assertIn(self.order, self.teststock.buy_orders)
         print('test_add_buy_order passed.')
 
     def test_player_buy_orders(self):
+        # todo need updating to new namedtuple format
         order = (100, 1, 'NPC')
         self.teststock.add_buy_order(self.order)
         self.assertIn(self.order, self.teststock.player_buy_orders(order[2]))
         print('test_player_buy_orders passed.')
 
     def test_player_similar_buy_order(self):
+        # todo need updating to new namedtuple format
         teststock = Stock('testStock', 1000)
         existing_order = (100, 5, 'NPC')
         existing_order2 = (200, 5, 'NPC')
@@ -112,6 +146,7 @@ class TestStock(unittest.TestCase):
         print('test_player_similar_buy_order passed.')
 
     def test_player_similar_buy_order2(self):
+        # todo need updating to new namedtuple format
         existing_order = (100, 5, 'NPC')
         existing_order2 = (200, 5, 'NPC')
         existing_order3 = (100, 5, 'Neptun')
@@ -126,19 +161,24 @@ class TestStock(unittest.TestCase):
         print('test_player_similar_buy_order2 passed.')
 
     def test_add_duplicate_buy_order(self):
+        # todo need updating to new namedtuple format
         self.teststock.add_buy_order(self.order)
         self.teststock.add_buy_order(self.order)
         self.assertIn((100, 2, 'NPC'), self.teststock.buy_orders)
+        self.assertTrue(len(self.teststock.buy_orders) == 1)
         print('test_add_duplicate_buy_orders passed.')
 
     def test_remove_buy_order(self):
+        # todo need updating to new namedtuple format
         self.teststock.add_buy_order(self.order)
         self.assertIn(self.order, self.teststock.buy_orders)
         self.teststock.remove_buy_order(self.order)
         self.assertNotIn(self.order, self.teststock.buy_orders)
+        self.assertTrue(len(self.teststock.buy_orders) == 0)
         print('test_remove_buy_order passed.')
 
     def test_add_1337_similar_orders(self):
+        # todo need updating to new namedtuple format
         bigorder = (100, 1337, 'NPC')
         for i in range(1337):
             self.teststock.add_buy_order(self.order)
