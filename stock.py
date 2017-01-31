@@ -39,9 +39,9 @@ class Stock:
         # todo maybe change to dict (price, player) : vol ... easy to find values
 
 
-    def player_similar_order(self, Order):
-        return [match for match in self.orders[Order.order_type]
-                if (match.price == Order.price) and (match.player == Order.player)]
+    def player_similar_order(self, order):
+        return [match for match in self.orders[order.order_type]
+                if (match.price == order.price) and (match.player == order.player)]
 
 
     # todo on sell check if offer price is lower than current price = instant sell
