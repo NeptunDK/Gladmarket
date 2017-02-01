@@ -4,28 +4,23 @@ import unittest
 import logging
 from collections import namedtuple
 
-Order = namedtuple('Order', ['price', 'vol', 'player', 'order_type'])
+Order = namedtuple('Order', ['price', 'vol', 'player', 'order_type'])  # should this be here or somewhere else?
 
 
 class Stock:
     def __init__(self, name, price):
         self.name = name
-        self.price = price
-        self.high_price = price
-        self.low_price = price
+        self.price = price  # Trending?
+        self.high_price = price  # daily, alltime?
+        self.low_price = price  # daily, alltime?
         self.orders = {'buy': [], 'sell': []}  # hmmm set or list????
 
-    def list_buy_orders(self):
-        # after added, update unittest to not use self.teststock.orders['buy']
-        # but use self.teststock.list_buy_orders()
-        pass
-
-    def list_sell_orders(self):
-        # after added, update unittest to not use self.teststock.orders['sell']
-        # but use self.teststock.list_sell_orders()
-        pass
-
     def add_order(self, neworder):
+        # todo on buy check if offer price is higher than current price = instant buy
+        # todo      if lower price put in buy_orders
+
+        # todo on sell check if offer price is lower than current price = instant sell
+        # todo      if higher put in sell_orders
         similar_order = self.list_similar_player_order(neworder)
 
         if not similar_order:
@@ -52,40 +47,84 @@ class Stock:
     def remove_order(self, order):
         if order in self.orders[order.order_type]:
             self.orders[order.order_type].remove(order)
+            # todo if buy order require full buy amount to be put in escrow refund money to player
+            # todo if sell order return stocks to player's portfolio
+            logging.warning(f"{order} removed.")
         else:
             logging.warning(f"{order} not found!")
 
-    # todo on buy check if offer price is higher than current price = instant buy
-    # todo      if lower price put in buy_orders
+    def modify_order(self, oldorder, neworder):
+        # todo player modify order, not sure yet if this is needed or if there is a better way
+        # todo unittest
+        # order exsist?
+        # remove old order
+        # add new order
+        pass
 
-    # todo on sell check if offer price is lower than current price = instant sell
-    # todo      if higher put in sell_orders
+    def process_orders(self):
+        # todo loop to match if there is buy orders matching
+        for order in self.orders['buy']:
+            if order.price >= self.price:
+                logging.warning(f"{order} matched price of: {self.price}")
+                # todo update player credit/portfolio
+                self.remove_order(order)
 
-    # todo loop to match if there is buy orders matching
-    # todo loop to match if there is sell orders matching
+        # todo loop to match if there is sell orders matching
+        for order in self.orders['sell']:
+            if order.price <= self.price:
+                logging.warning(f"{order} matched price of: {self.price}")
+                # todo update player credit/portfolio
+                self.remove_order(order)
 
-    # todo trending? daily/week high/low?
+        # todo match buy with sell orders?
 
-    # todo player cancle order
-    # todo player modify order
+    def update_low_high_price(self):
+        if self.price > self.high_price:
+            self.high_price = self.price
+        if self.price < self.low_price:
+            self.low_price = self.price
 
+    # todo split, only needed if I implement limited number of shares?
     # todo split order method needed? maybe not if buy orders always take the player credit in escrow
-    # todo might only be needed if there is support for buy under current price or sell over current price between players
-
-    # todo if price == 0 -> out of buisness -> remove from market?
+    # might only be needed if there is support for buy under current price or sell over current price between players
+    # or if there is a limited supply/demand
 
     # todo stock price history?
     # todo logging?
 
-    # todo split, only needed if I implement limited number of shares
+    # todo if price == 0 -> out of buisness -> remove from market? Might be more suited in the Market class.
 
 
 class TestStock(unittest.TestCase):
     def setUp(self):
         self.teststock = Stock('testStock', 1000)
-        # price, volume, player
+        # price, volume, player, type
         self.buyorder = Order(100, 1, 'NPC', 'buy')
         self.sellorder = Order(100, 1, 'NPC', 'sell')
+
+    def test_process_orders(self):
+        # todo add Player class instance, to test credit/portfolio updates,
+        # or maybe have that part in a different test/class
+        teststock = Stock('testStock', 1000)
+        self.assertEqual(teststock.price, 1000)
+        buyorder = Order(900, 1, 'NPC', 'buy')
+        sellorder = Order(1100, 1, 'NPC', 'sell')
+        teststock.add_order(buyorder)
+        teststock.add_order(sellorder)
+        teststock.process_orders()
+        self.assertIn(buyorder, teststock.orders['buy'])
+        self.assertIn(sellorder, teststock.orders['sell'])
+        teststock.price = 900
+        self.assertEqual(teststock.price, 900)
+        teststock.process_orders()
+        self.assertNotIn(buyorder, teststock.orders['buy'])
+        self.assertIn(sellorder, teststock.orders['sell'])
+        teststock.price = 1100
+        self.assertEqual(teststock.price, 1100)
+        teststock.process_orders()
+        self.assertNotIn(buyorder, teststock.orders['buy'])
+        self.assertNotIn(sellorder, teststock.orders['sell'])
+        print('test_process_orders passed.')
 
     def test_create_stock(self):
         self.assertEqual(self.teststock.name, 'testStock') and self.assertEqual(self.teststock.price, 1000)
@@ -110,6 +149,7 @@ class TestStock(unittest.TestCase):
         self.assertIn(Order(100, 5, 'Neptun', 'buy'), self.teststock.orders['buy'])
         self.assertNotIn(Order(100, 5, 'NPC', 'buy'), self.teststock.orders['buy'])
         self.assertNotIn(Order(100, 1, 'NPC', 'buy'), self.teststock.orders['buy'])
+        print('test_add_order passed.')
 
     def test_add_buy_order(self):
         self.teststock.add_order(self.buyorder)
@@ -174,17 +214,29 @@ class TestStock(unittest.TestCase):
         self.assertIn(bigorder, self.teststock.orders['buy'])
         print('test_add_1337_similar_orders passed.')
 
-    def test_add_sell_order(self):
-        pass
-        print('test_add_sell_order passed.')
-
     def test_update_low_high_price(self):
-        pass
+        self.teststock.price = 1000
+        self.assertEqual(self.teststock.price, 1000)
+        self.teststock.update_low_high_price()
+        self.assertEqual(self.teststock.price, 1000)
+        self.assertEqual(self.teststock.high_price, 1000)
+        self.assertEqual(self.teststock.low_price, 1000)
+        self.teststock.price = 1100
+        self.teststock.update_low_high_price()
+        self.assertEqual(self.teststock.price, 1100)
+        self.assertEqual(self.teststock.high_price, 1100)
+        self.assertEqual(self.teststock.low_price, 1000)
+        self.teststock.price = 900
+        self.teststock.update_low_high_price()
+        self.assertEqual(self.teststock.price, 900)
+        self.assertEqual(self.teststock.high_price, 1100)
+        self.assertEqual(self.teststock.low_price, 900)
+        self.teststock.price = 1000
+        self.teststock.update_low_high_price()
+        self.assertEqual(self.teststock.price, 1000)
+        self.assertEqual(self.teststock.high_price, 1100)
+        self.assertEqual(self.teststock.low_price, 900)
         print('test_update_low_high_price passed.')
-
-    def test_process_orders(self):
-        pass
-        print('test_process_orders passed.')
 
 if __name__ == '__main__':
     unittest.main()
