@@ -2,9 +2,7 @@
 __author__ = 'NeptunDK'
 import unittest
 import logging
-from collections import namedtuple
-
-Order = namedtuple('Order', ['price', 'vol', 'player', 'order_type'])  # should this be here or somewhere else?
+from helpers import Order
 
 
 class Stock:
