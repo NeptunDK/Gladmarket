@@ -1,26 +1,25 @@
 #!/usr/bin/python3
 __author__ = 'NeptunDK'
 import unittest
-from stock import Stock
 from helpers import Order, Share, convert_to_share
 import logging
 
-class Player:
-    def __init__(self, name, starting_credits, description = None):
+
+class Player: #could also be called wallet, then a player/firm/company/bot could have a wallet
+    def __init__(self, name, starting_credits, description=None):
         self.name = name
         self.description = description
         self.credit = starting_credits
         self.portfolio = []  # Share = namedtuple('Share', ['stockname', 'vol', 'buyprice'])
-        self.networth = None # todo
+        self.networth = None
         self.salary = 5000
 
     def add_salary(self):
         # todo is it safe to have this here?
         self.credit += self.salary
 
-    def add_share_to_portfolio(self, stock, order):
+    def add_share_to_portfolio(self, share):
         # todo need check to see if player actually bought the stock?
-        share = convert_to_share(stock, order)
         if share not in self.portfolio:
             self.portfolio.append(share)
         else:
@@ -52,29 +51,37 @@ class Player:
         # todo combine
         pass
 
-    # list shares
+    def list_shares(self):
+        # todo sort? list_shares(self, sortkey=None)
+        # todo list number of shares list_shares(self, amount=None)
+        return self.portfolio
 
-    # sell stocks
+    # sell stocks/shares
+    # on the market instead?
 
     # purchase/selling history here or somewhere else?
+    # self.transactions_log
 
     # out of buisness / game over / start over
+    #
 
-    # networth
+    def update_networth(self):
+        # todo update to use CURRENT stockprice, instead of share.buyprice
+        share_networth = sum(share.vol * share.buyprice for share in self.portfolio)
+        self.networth = self.credit + share_networth
 
     # login
 
-    # save/load users
-
+    # save/load user
+    # todo is this the correct place?
 
 
 class TestPlayer(unittest.TestCase):
     def setUp(self):
         self.testplayer = Player('Player1', 10000, 'Is only a test.')
-        self.teststock = Stock("teststock", 1000)
+        self.testshare = Share("Teststock", 1, 100)
         self.buyorder = Order(100, 1, 'Player1', 'buy')
         self.sellorder = Order(100, 1, 'Player1', 'sell')
-        self.testshare = convert_to_share(self.teststock, self.buyorder)
 
     def test_player(self):
         self.assertEqual(self.testplayer.name, 'Player1')
@@ -92,10 +99,10 @@ class TestPlayer(unittest.TestCase):
 
     def test_add_shares_to_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.teststock, self.buyorder)
+        self.testplayer.add_share_to_portfolio(self.testshare)
         self.assertIn(self.testshare, self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.teststock, self.buyorder)
-        testcombinedshares = Share('teststock', 2, 100)
+        self.testplayer.add_share_to_portfolio(self.testshare)
+        testcombinedshares = Share('Teststock', 2, 100)
         self.assertIn(testcombinedshares, self.testplayer.portfolio)
         print('test_add_shares_to_portfolio passed.')
 
@@ -108,16 +115,37 @@ class TestPlayer(unittest.TestCase):
 
     def test_remove_shares_from_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.teststock, self.buyorder)
+        self.testplayer.add_share_to_portfolio(self.testshare)
         self.assertIn(self.testshare, self.testplayer.portfolio)
         self.testplayer.remove_shares_from_portfolio(self.testshare)
         self.assertNotIn(self.testshare, self.testplayer.portfolio)
-        testcombinedshares = Share('teststock', 2, 100)
-        self.testplayer.portfolio.append(testcombinedshares)
+        testcombinedshares = Share('Teststock', 2, 100)
+        self.testplayer.add_share_to_portfolio(testcombinedshares)
         self.assertIn(testcombinedshares, self.testplayer.portfolio)
         self.testplayer.remove_shares_from_portfolio(self.testshare)
         self.assertIn(self.testshare, self.testplayer.portfolio)
         print('test_remove_shares_from_portfolio passed.')
+
+    def test_list_shares(self):
+        self.assertEqual([], self.testplayer.portfolio)
+        self.testplayer.add_share_to_portfolio(self.testshare)
+        self.assertIn(self.testshare, self.testplayer.portfolio)
+        print(self.testplayer.list_shares()[0])
+        print('test_list_shares passed.')
+
+    def test_update_networth(self):
+        # todo update to use CURRENT stockprice, instead of share.buyprice
+        self.assertEqual(self.testplayer.networth, None)
+        self.testplayer.update_networth()
+        self.assertEqual(self.testplayer.networth, 10000)
+        self.testplayer.add_share_to_portfolio(self.testshare)
+        self.testplayer.update_networth()
+        self.assertEqual(self.testplayer.networth, 10100)
+        self.testsharetwo = Share("Sharetest", 2, 33)
+        self.testplayer.add_share_to_portfolio(self.testsharetwo)
+        self.testplayer.update_networth()
+        self.assertEqual(self.testplayer.networth, 10166)
+        print('test_update_networth passed.')
 
 if __name__ == '__main__':
     unittest.main()

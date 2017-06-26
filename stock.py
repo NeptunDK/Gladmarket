@@ -5,13 +5,17 @@ import logging
 from helpers import Order
 
 
-class Stock:
+class Stock:  # could also be called asset since it could be more than stocks, raw_mat
     def __init__(self, name, price):
         self.name = name
-        self.price = price  # Trending?
-        self.high_price = price  # daily, alltime?
-        self.low_price = price  # daily, alltime?
+        self.price = price  # todo Trending?
+        self.high_price = price  # todo daily, alltime?
+        self.low_price = price  # todo daily, alltime?
         self.orders = {'buy': [], 'sell': []}  # hmmm set or list????
+        # todo orderID, maybe in market class?
+
+    def ranwalk_price(self):
+        pass
 
     def add_order(self, neworder):
         # todo on buy check if offer price is higher than current price = instant buy
@@ -43,13 +47,17 @@ class Stock:
         return [match for match in self.orders['sell'] if match.player == player]
 
     def remove_order(self, order):
+        # todo alter to work with process_orders / complete orders in market class
         if order in self.orders[order.order_type]:
             self.orders[order.order_type].remove(order)
-            # todo if buy order require full buy amount to be put in escrow refund money to player
-            # todo if sell order return stocks to player's portfolio
+            # todo if buy order, require full buy amount to be put in escrow refund money to player
+            # todo if sell order, return stocks to player's portfolio
             logging.warning(f"{order} removed.")
         else:
             logging.warning(f"{order} not found!")
+
+    def cancel_order(self, order):
+        pass
 
     def modify_order(self, oldorder, neworder):
         # todo player modify order, not sure yet if this is needed or if there is a better way
@@ -60,6 +68,7 @@ class Stock:
         pass
 
     def process_orders(self):
+        # todo move to market?
         # todo loop to match if there is buy orders matching
         for order in self.orders['buy']:
             if order.price >= self.price:
