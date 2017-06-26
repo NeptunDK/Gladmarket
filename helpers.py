@@ -28,21 +28,3 @@ class TestHelpers(unittest.TestCase):
     def test_convert_to_share(self):
         self.assertEqual(convert_to_share(self.teststock, self.buyorder), self.testshare)
         print('test_convert_to_share passed.')
-
-#
-#
-#     def test_valid_order_tuple(self):
-#         valid_buy_order = ('buy', 100, 1, 'NPC')
-#         valid_sell_order = ('sell', 100, 1, 'NPC')
-#         invalid_order = (100, 1, 'NPC')
-#
-#         self.assert
-#
-#         def test_valid_order_dict(self):
-#             valid_buy_order = (type'buy', 100, 1, 'NPC')
-#             valid_sell_order = ('sell', 100, 1, 'NPC')
-#             invalid_order = (100, 1, 'NPC')
-#
-#             self.
-#             assert
-#

@@ -15,11 +15,3 @@ class Market:
         # could be market.orders['buy'], market.buyorders, market.stocks.orders['buy']
     # todo maybe most of the order methods under a stock should be here?!
 
-
-
-
-
-
-
-
-
