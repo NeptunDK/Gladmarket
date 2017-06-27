@@ -12,9 +12,11 @@ class Stock:  # could also be called asset since it could be more than stocks, r
         self.high_price = price  # todo daily, alltime?
         self.low_price = price  # todo daily, alltime?
         self.orders = {'buy': [], 'sell': []}  # hmmm set or list????
-        # todo orderID, maybe in market class?
+        # todo orderID, added to Order namedtuple?
 
     def ranwalk_price(self):
+        # todo not sure yet if it should be here or in the market class
+        # todo unittest
         pass
 
     def add_order(self, neworder):
@@ -27,6 +29,7 @@ class Stock:  # could also be called asset since it could be more than stocks, r
 
         if not similar_order:
             self.orders[neworder.order_type].append(neworder)
+            logging.warning(f"{neworder} added.")
         else:
             # update similar order
             current_volume = similar_order[0].vol
@@ -35,6 +38,7 @@ class Stock:  # could also be called asset since it could be more than stocks, r
             updated_order = Order(price, vol, player, order_type)
             self.orders[neworder.order_type].remove(similar_order[0])
             self.orders[neworder.order_type].append(updated_order)
+            logging.warning(f"New order: {neworder} combined with old oder: {similar_order[0]} into: {updated_order}.")
 
     def list_similar_player_order(self, order):
         return [match for match in self.orders[order.order_type]
@@ -57,7 +61,12 @@ class Stock:  # could also be called asset since it could be more than stocks, r
             logging.warning(f"{order} not found!")
 
     def cancel_order(self, order):
-        pass
+        # todo how to return ok/fail to user?
+        if order in self.orders[order.order_type]:
+            self.orders[order.order_type].remove(order)
+            logging.warning(f"{order} cancelled.")
+        else:
+            logging.warning(f"{order} not found!")
 
     def modify_order(self, oldorder, neworder):
         # todo player modify order, not sure yet if this is needed or if there is a better way
@@ -205,13 +214,13 @@ class TestStock(unittest.TestCase):
         self.assertTrue(len(self.teststock.orders['buy']) == 1)
         print('test_add_duplicate_buy_orders passed.')
 
-    def test_remove_buy_order(self):
+    def test_cancel_order(self):
         self.teststock.add_order(self.buyorder)
         self.assertIn(self.buyorder, self.teststock.orders['buy'])
-        self.teststock.remove_order(self.buyorder)
+        self.teststock.cancel_order(self.buyorder)
         self.assertNotIn(self.buyorder, self.teststock.orders['buy'])
         self.assertTrue(len(self.teststock.orders['buy']) == 0)
-        print('test_remove_buy_order passed.')
+        print('test_cancel_order passed.')
 
     def test_add_1337_similar_orders(self):
         # todo need updating to new namedtuple format
@@ -219,6 +228,7 @@ class TestStock(unittest.TestCase):
         for i in range(1337):
             self.teststock.add_order(self.buyorder)
         self.assertIn(bigorder, self.teststock.orders['buy'])
+        self.assertEqual(len(self.teststock.orders['buy']), 1)
         print('test_add_1337_similar_orders passed.')
 
     def test_update_low_high_price(self):

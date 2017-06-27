@@ -9,9 +9,7 @@ from helpers import Order, Share
 class Market:
     def __init__(self, name):
         self.name = name
-        self.stocks = None
+        self.stocks = {}
 
-    # todo figure out good layout of orders.
-        # could be market.orders['buy'], market.buyorders, market.stocks.orders['buy']
-    # todo maybe most of the order methods under a stock should be here?!
-
+    # todo process all stocks
+    #
