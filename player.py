@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 __author__ = 'NeptunDK'
 import unittest
-from helpers import Order, Share, convert_to_share
+from helpers import Order, Share
 import logging
+from operator import itemgetter, attrgetter
 
 
-class Player: #could also be called wallet, then a player/firm/company/bot could have a wallet
+class Player:  # could also be called wallet, then a player/firm/company/bot could have a wallet
     def __init__(self, name, starting_credits, description=None):
         self.name = name
         self.description = description
@@ -19,16 +20,19 @@ class Player: #could also be called wallet, then a player/firm/company/bot could
         self.credit += self.salary
 
     def add_share_to_portfolio(self, share):
-        # todo need check to see if player actually bought the stock?
-        if share not in self.portfolio:
+        similar_share = self.list_similar_share(share)
+
+        if not similar_share:
             self.portfolio.append(share)
         else:
-            share_in_portfolio = self.list_similar_share(share)[0]
-            newshare = Share(share.stockname, share.vol + share_in_portfolio.vol, share.buyprice)
-            self.portfolio[self.portfolio.index(share_in_portfolio)] = newshare
+            new_volume = similar_share[0].vol + share.vol
+            updated_share = Share(share.stockname, new_volume, share.buyprice)
+            self.portfolio.remove(similar_share[0])
+            self.portfolio.append(updated_share)
+            logging.warning(f"New order: {share} combined with old share: {similar_share[0]} into: {updated_share}.")
+        # todo need check to see if player actually bought the stock?
 
     def remove_shares_from_portfolio(self, share):
-        # todo should it be (self, stock, share) and use the convert to share like add_share_to_portfolio?
         if share in self.portfolio:
             self.portfolio.remove(share)
             logging.warning(f"{share} removed from portfolio.")
@@ -45,10 +49,11 @@ class Player: #could also be called wallet, then a player/firm/company/bot could
 
     def sort_portfolio(self):
         # todo choose sorting key, stockname, volume, price, value
-        pass
+        self.portfolio = sorted(self.portfolio, key=attrgetter('vol'), reverse=True)  # secondary key
+        self.portfolio = sorted(self.portfolio, key=attrgetter('stockname',))  # primary key
 
     def combine_portfolio_shares(self):
-        # todo combine
+        # todo combine don't care about buyprice
         pass
 
     def list_shares(self):
@@ -106,6 +111,18 @@ class TestPlayer(unittest.TestCase):
         self.assertIn(testcombinedshares, self.testplayer.portfolio)
         print('test_add_shares_to_portfolio passed.')
 
+    def test_add_shares_to_portfolio2(self):
+        self.assertEqual([], self.testplayer.portfolio)
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 8, 1000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 5000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        print('name')
+        print(self.testplayer.portfolio)
+        self.assertIn(Share(stockname='DELL', vol=10, buyprice=1000), self.testplayer.portfolio)
+        self.assertIn(Share(stockname='DELL', vol=1, buyprice=5000), self.testplayer.portfolio)
+        print('test_add_shares_to_portfolio2 passed.')
+
     def test_list_similar_share(self):
         self.assertEqual([], self.testplayer.portfolio)
         self.testplayer.portfolio.append(self.testshare)
@@ -146,6 +163,25 @@ class TestPlayer(unittest.TestCase):
         self.testplayer.update_networth()
         self.assertEqual(self.testplayer.networth, 10166)
         print('test_update_networth passed.')
+
+    def test_sort_portfolio(self):
+        self.assertEqual([], self.testplayer.portfolio)
+        self.testplayer.add_share_to_portfolio(Share('IMB', 3, 150))
+        self.testplayer.add_share_to_portfolio(Share('IMB', 2, 75))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 8, 1000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 5000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.assertIn(Share(stockname='IMB', vol=3, buyprice=150), self.testplayer.portfolio)
+        self.assertIn(Share(stockname='IMB', vol=2, buyprice=75), self.testplayer.portfolio)
+        self.assertIn(Share(stockname='DELL', vol=10, buyprice=1000), self.testplayer.portfolio)
+        self.assertIn(Share(stockname='DELL', vol=1, buyprice=5000), self.testplayer.portfolio)
+        self.testplayer.sort_portfolio()
+        self.assertEqual([Share(stockname='DELL', vol=10, buyprice=1000),
+                          Share(stockname='DELL', vol=1, buyprice=5000),
+                          Share(stockname='IMB', vol=3, buyprice=150),
+                          Share(stockname='IMB', vol=2, buyprice=75)], self.testplayer.portfolio)
+        print('test_sort_portfolio passed.')
 
 if __name__ == '__main__':
     unittest.main()
