@@ -7,7 +7,7 @@ from operator import itemgetter, attrgetter
 
 
 class Player:  # could also be called wallet, then a player/firm/company/bot could have a wallet
-    def __init__(self, name, starting_credits, description=None):
+    def __init__(self, name, starting_credits=10000, description=None):
         self.name = name
         self.description = description
         self.credit = starting_credits
@@ -49,9 +49,13 @@ class Player:  # could also be called wallet, then a player/firm/company/bot cou
         self.portfolio = sorted(self.portfolio, key=attrgetter('vol'), reverse=True)  # secondary key
         self.portfolio = sorted(self.portfolio, key=attrgetter('stockname',))  # primary key
 
-    def combine_portfolio_shares(self):
-        # todo combine don't care about buyprice
-        pass
+    def flatten_portfolio(self):
+        # Ignores buyprice of shares to remove clutter
+        new_portfolio = self.portfolio
+        self.portfolio = []
+
+        for share in new_portfolio:
+            self.add_share_to_portfolio(Share(share.stockname, share.vol, 0))
 
     def list_shares(self):
         # todo sort? list_shares(self, sortkey=None)
@@ -158,6 +162,19 @@ class TestPlayer(unittest.TestCase):
                           Share(stockname='IMB', vol=3, buyprice=150),
                           Share(stockname='IMB', vol=2, buyprice=75)], self.testplayer.portfolio)
         print('test_sort_portfolio passed.')
+
+    def test_flatten_portfolio(self):
+        self.assertEqual([], self.testplayer.portfolio)
+        self.testplayer.add_share_to_portfolio(Share('IMB', 3, 150))
+        self.testplayer.add_share_to_portfolio(Share('IMB', 2, 75))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 8, 1000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 5000))
+        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.testplayer.flatten_portfolio()
+        self.assertIn(Share(stockname='DELL', vol=11, buyprice=0), self.testplayer.portfolio)
+        self.assertIn(Share(stockname='IMB', vol=5, buyprice=0), self.testplayer.portfolio)
+        print('test_flatten_portfolio passed.')
 
 if __name__ == '__main__':
     unittest.main()

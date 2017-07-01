@@ -14,6 +14,9 @@ class Stock:
         self.orders = {'buy': [], 'sell': []}
         # todo orderID, added to Order namedtuple?
 
+    def __repr__(self):
+        return f"{self.name} @ {self.price}"
+
     def place_order(self, order):
         if order.order_type == 'buy' and self.price <= order.price:
             logging.info(f"{order.player} bought {order.vol} shares of {self.name} "
@@ -124,6 +127,10 @@ class TestStock(unittest.TestCase):
         self.assertEqual(self.teststock.name, 'testStock') and self.assertEqual(self.teststock.price, 1000)
         self.assertEqual((self.teststock.name, self.teststock.price), ('testStock', 1000))
         print('test_create_stock passed.')
+
+    def test___repr__(self):
+        self.assertEqual(repr(self.teststock),'testStock @ 1000')
+        print('test___repr__ passed.')
 
     def test_alterprice(self):
         self.teststock.price = 1200
