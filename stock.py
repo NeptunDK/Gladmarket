@@ -5,42 +5,42 @@ import logging
 from helpers import Order
 
 
-class Stock:  # could also be called asset since it could be more than stocks, raw_mat
+class Stock:
     def __init__(self, name, price):
         self.name = name
         self.price = price  # todo Trending?
-        self.high_price = price  # todo daily, alltime?
-        self.low_price = price  # todo daily, alltime?
-        self.orders = {'buy': [], 'sell': []}  # hmmm set or list????
+        self.high_price = price  # todo do intervals like last hour/daily?
+        self.low_price = price  # todo do intervals like last hour/daily?
+        self.orders = {'buy': [], 'sell': []}
         # todo orderID, added to Order namedtuple?
 
     def place_order(self, order):
         if order.order_type == 'buy' and self.price <= order.price:
-            logging.warning(f"{order.player} bought {order.vol} shares of {self.name} for a price of {order.vol * order.price}.")
-            logging.warning(f"{order.player} completed {order}.")
+            logging.info(f"{order.player} bought {order.vol} shares of {self.name} "
+                            f"for a price of {order.vol * order.price}.")
             return True
         elif order.order_type == 'sell' and self.price >= order.price:
-            logging.warning(f"{order.player} sold {order.vol} shares of {self.name} for a price of {order.vol * order.price}.")
-            logging.warning(f"{order.player} completed {order}.")
+            logging.info(f"{order.player} sold {order.vol} shares of {self.name} "
+                            f"for a price of {order.vol * order.price}.")
             return True
         else:
             self.add_order_to_escrow(order)
 
-    def add_order_to_escrow(self, neworder):
-        similar_order = self.list_similar_player_order(neworder)
+    def add_order_to_escrow(self, order):
+        similar_order = self.list_similar_player_order(order)
 
         if not similar_order:
-            self.orders[neworder.order_type].append(neworder)
-            logging.warning(f"{neworder} added.")
+            self.orders[order.order_type].append(order)
+            logging.info(f"{order} added.")
         else:
             # update similar order
             current_volume = similar_order[0].vol
-            price, vol, player, order_type = neworder
+            price, vol, player, order_type = order
             vol += current_volume
             updated_order = Order(price, vol, player, order_type)
-            self.orders[neworder.order_type].remove(similar_order[0])
-            self.orders[neworder.order_type].append(updated_order)
-            logging.warning(f"New order: {neworder} combined with old oder: {similar_order[0]} into: {updated_order}.")
+            self.orders[order.order_type].remove(similar_order[0])
+            self.orders[order.order_type].append(updated_order)
+            logging.info(f"{order} combined with old oder: {similar_order[0]} into: {updated_order}.")
 
     def list_similar_player_order(self, order):
         return [match for match in self.orders[order.order_type]
@@ -58,12 +58,33 @@ class Stock:  # could also be called asset since it could be more than stocks, r
     def list_sell_orders(self):
         return self.orders['sell']
 
+    def match_orders(self):
+        matched_orders = []  # todo better off being self.matched_orders?
+
+        # buy orders matching current stock price or higher
+        for buy_order in self.orders['buy']:
+            if buy_order.price >= self.price:
+                logging.info(f"{buy_order} matched price of: {self.price}")
+                matched_orders.append(buy_order)
+                self.orders['buy'].remove(buy_order)
+
+        # sell orders matching current stock price or lower
+        for sell_order in self.orders['sell']:
+            if sell_order.price <= self.price:
+                logging.info(f"{sell_order} matched price of: {self.price}")
+                matched_orders.append(sell_order)
+                self.orders['sell'].remove(sell_order)
+
+        return matched_orders  # todo update player credit/portfolio
+
     def cancel_order(self, order):
-        # todo how to return ok/fail to user ok to just return True/False
-        # todo order id
+        # this can't be in match_orders as a canceled buy order returns credits to player
+        # and canceled sell order returns shares to player
+        # todo if buy order is canceled return credit to player
+        # todo if sell order is canceled return shares to player's portfolio
         if order in self.orders[order.order_type]:
             self.orders[order.order_type].remove(order)
-            logging.warning(f"{order} cancelled.")
+            logging.info(f"{order} cancelled.")
             return True
         else:
             logging.warning(f"{order} not found!")
@@ -224,6 +245,31 @@ class TestStock(unittest.TestCase):
         self.assertEqual(self.teststock.high_price, 1100)
         self.assertEqual(self.teststock.low_price, 900)
         print('test_update_low_high_price passed.')
+
+    def test_match_orders(self):
+        # todo add Player class instance, to test credit/portfolio updates,
+        # or maybe have that part in a different test/class
+        teststock = Stock('testStock', 1000)
+        self.assertEqual(teststock.price, 1000)
+        buyorder = Order(900, 1, 'NPC', 'buy')
+        sellorder = Order(1100, 1, 'NPC', 'sell')
+        teststock.add_order_to_escrow(buyorder)
+        teststock.add_order_to_escrow(sellorder)
+        teststock.match_orders()
+        self.assertIn(buyorder, teststock.orders['buy'])
+        self.assertIn(sellorder, teststock.orders['sell'])
+        teststock.price = 900
+        self.assertEqual(teststock.price, 900)
+        teststock.match_orders()
+        self.assertNotIn(buyorder, teststock.orders['buy'])
+        self.assertIn(sellorder, teststock.orders['sell'])
+        teststock.price = 1100
+        self.assertEqual(teststock.price, 1100)
+        teststock.match_orders()
+        self.assertNotIn(buyorder, teststock.orders['buy'])
+        self.assertNotIn(sellorder, teststock.orders['sell'])
+        print('test_match_orders passed.')
+
 
 if __name__ == '__main__':
     unittest.main()

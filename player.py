@@ -16,7 +16,7 @@ class Player:  # could also be called wallet, then a player/firm/company/bot cou
         self.salary = 5000
 
     def add_salary(self):
-        # todo is it safe to have this here?
+        # is it safe to have this here?
         self.credit += self.salary
 
     def add_share_to_portfolio(self, share):
@@ -29,26 +29,23 @@ class Player:  # could also be called wallet, then a player/firm/company/bot cou
             updated_share = Share(share.stockname, new_volume, share.buyprice)
             self.portfolio.remove(similar_share[0])
             self.portfolio.append(updated_share)
-            logging.warning(f"New order: {share} combined with old share: {similar_share[0]} into: {updated_share}.")
-        # todo need check to see if player actually bought the stock?
+            logging.info(f"New order: {share} combined with old share: {similar_share[0]} into: {updated_share}.")
 
     def remove_shares_from_portfolio(self, share):
         if share in self.portfolio:
             self.portfolio.remove(share)
-            logging.warning(f"{share} removed from portfolio.")
+            logging.info(f"{share} removed from portfolio.")
         else:
             similar_share = self.list_similar_share(share)[0]
-            print('similar_share', similar_share)
             newshare = Share(share.stockname, similar_share.vol - share.vol, share.buyprice)
             self.portfolio[self.portfolio.index(similar_share)] = newshare
-            logging.warning(f"{similar_share} updated to {newshare} in portfolio.")
+            logging.info(f"{similar_share} updated to {newshare} in portfolio.")
 
     def list_similar_share(self, share):
         return [match for match in self.portfolio
                 if (match.stockname == share.stockname) and (match.buyprice == share.buyprice)]
 
     def sort_portfolio(self):
-        # todo choose sorting key, stockname, volume, price, value
         self.portfolio = sorted(self.portfolio, key=attrgetter('vol'), reverse=True)  # secondary key
         self.portfolio = sorted(self.portfolio, key=attrgetter('stockname',))  # primary key
 
@@ -68,15 +65,8 @@ class Player:  # could also be called wallet, then a player/firm/company/bot cou
     # self.transactions_log
 
     # out of buisness / game over / start over
-    #
-
-    def update_networth(self):
-        # todo update to use CURRENT stockprice, instead of share.buyprice
-        share_networth = sum(share.vol * share.buyprice for share in self.portfolio)
-        self.networth = self.credit + share_networth
 
     # login
-
     # save/load user
     # todo is this the correct place?
 
@@ -149,20 +139,6 @@ class TestPlayer(unittest.TestCase):
         self.assertIn(self.testshare, self.testplayer.portfolio)
         print(self.testplayer.list_shares()[0])
         print('test_list_shares passed.')
-
-    def test_update_networth(self):
-        # todo update to use CURRENT stockprice, instead of share.buyprice
-        self.assertEqual(self.testplayer.networth, None)
-        self.testplayer.update_networth()
-        self.assertEqual(self.testplayer.networth, 10000)
-        self.testplayer.add_share_to_portfolio(self.testshare)
-        self.testplayer.update_networth()
-        self.assertEqual(self.testplayer.networth, 10100)
-        self.testsharetwo = Share("Sharetest", 2, 33)
-        self.testplayer.add_share_to_portfolio(self.testsharetwo)
-        self.testplayer.update_networth()
-        self.assertEqual(self.testplayer.networth, 10166)
-        print('test_update_networth passed.')
 
     def test_sort_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
