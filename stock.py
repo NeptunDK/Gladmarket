@@ -28,6 +28,7 @@ class Stock:
             return True
         else:
             self.add_order_to_escrow(order)
+            return False
 
     def add_order_to_escrow(self, order):
         similar_order = self.list_similar_player_order(order)
@@ -38,9 +39,9 @@ class Stock:
         else:
             # update similar order
             current_volume = similar_order[0].vol
-            price, vol, player, order_type = order
+            player, order_type, vol, stockname, price = order
             vol += current_volume
-            updated_order = Order(price, vol, player, order_type)
+            updated_order = Order(player, order_type, vol, stockname, price)
             self.orders[order.order_type].remove(similar_order[0])
             self.orders[order.order_type].append(updated_order)
             logging.info(f"{order} combined with old oder: {similar_order[0]} into: {updated_order}.")
@@ -116,20 +117,20 @@ class Stock:
 
 class TestStock(unittest.TestCase):
     def setUp(self):
-        self.teststock = Stock('testStock', 1000)
+        self.teststock = Stock('Teststock', 1000)
         # price, volume, player, type
-        self.buyorder = Order(100, 1, 'NPC', 'buy')
-        self.buyorder_two = Order(1100, 1, 'NPC', 'buy')
-        self.sellorder = Order(100, 1, 'NPC', 'sell')
-        self.sellorder_two = Order(1100, 1, 'NPC', 'sell')
+        self.buyorder = Order('NPC', 'buy', 1, 'Teststock', 100)
+        self.buyorder_two = Order('NPC', 'buy', 1, 'Teststock', 1100)
+        self.sellorder = Order('NPC', 'sell', 1, 'Teststock', 100)
+        self.sellorder_two = Order('NPC', 'sell', 1, 'Teststock', 1100)
 
     def test_create_stock(self):
-        self.assertEqual(self.teststock.name, 'testStock') and self.assertEqual(self.teststock.price, 1000)
-        self.assertEqual((self.teststock.name, self.teststock.price), ('testStock', 1000))
+        self.assertEqual(self.teststock.name, 'Teststock') and self.assertEqual(self.teststock.price, 1000)
+        self.assertEqual((self.teststock.name, self.teststock.price), ('Teststock', 1000))
         print('test_create_stock passed.')
 
     def test___repr__(self):
-        self.assertEqual(repr(self.teststock),'testStock @ 1000')
+        self.assertEqual(repr(self.teststock), 'Teststock @ 1000')
         print('test___repr__ passed.')
 
     def test_alterprice(self):
@@ -138,32 +139,32 @@ class TestStock(unittest.TestCase):
         print('test_alterprice passed.')
 
     def test_place_order_buy(self):
-        self.assertTrue(self.teststock.place_order(Order(1000, 1, 'NPC', 'buy')))
-        self.assertTrue(self.teststock.place_order(Order(1100, 1, 'NPC', 'buy')))
-        self.assertFalse(self.teststock.place_order(Order(100, 1, 'NPC', 'buy')))
-        self.assertIn(Order(100, 1, 'NPC', 'buy'), self.teststock.list_buy_orders())
+        self.assertTrue(self.teststock.place_order(Order('NPC', 'buy', 1, 'Teststock', 1000)))
+        self.assertTrue(self.teststock.place_order(Order('NPC', 'buy', 1, 'Teststock', 1100)))
+        self.assertFalse(self.teststock.place_order(Order('NPC', 'buy', 1, 'Teststock', 100)))
+        self.assertIn(Order('NPC', 'buy', 1, 'Teststock', 100), self.teststock.list_buy_orders())
         print('test_place_order_buy passed.')
 
     def test_place_order_sell(self):
-        self.assertTrue(self.teststock.place_order(Order(1000, 1, 'NPC', 'sell')))
-        self.assertTrue(self.teststock.place_order(Order(100, 1, 'NPC', 'sell')))
-        self.assertFalse(self.teststock.place_order(Order(1100, 1, 'NPC', 'sell')))
-        self.assertIn(Order(1100, 1, 'NPC', 'sell'), self.teststock.list_sell_orders())
+        self.assertTrue(self.teststock.place_order(Order('NPC', 'sell', 1, 'Teststock', 1000)))
+        self.assertTrue(self.teststock.place_order(Order('NPC', 'sell', 1, 'Teststock', 100)))
+        self.assertFalse(self.teststock.place_order(Order('NPC', 'sell', 1, 'Teststock', 1100)))
+        self.assertIn(Order('NPC', 'sell', 1, 'Teststock', 1100), self.teststock.list_sell_orders())
         print('test_place_order_sell passed.')
 
     def test_add_order(self):
         # setup
-        self.teststock.add_order_to_escrow(Order(100, 5, 'NPC', 'buy'))
-        self.teststock.add_order_to_escrow(Order(200, 5, 'NPC', 'buy'))
-        self.teststock.add_order_to_escrow(Order(100, 5, 'Neptun', 'buy'))
-        self.teststock.add_order_to_escrow(Order(100, 1, 'NPC', 'buy'))
+        self.teststock.add_order_to_escrow(Order('NPC', 'buy', 5, 'Teststock', 100))
+        self.teststock.add_order_to_escrow(Order('NPC', 'buy', 5, 'Teststock', 200))
+        self.teststock.add_order_to_escrow(Order('Neptun', 'buy', 5, 'Teststock', 100))
+        self.teststock.add_order_to_escrow(Order('NPC', 'buy', 1, 'Teststock', 100))
         # checks
-        self.valid_new_order = Order(100, 6, 'NPC', 'buy')
+        self.valid_new_order = Order('NPC', 'buy', 6, 'Teststock', 100)
         self.assertIn(self.valid_new_order, self.teststock.orders['buy'])
-        self.assertIn(Order(200, 5, 'NPC', 'buy'), self.teststock.orders['buy'])
-        self.assertIn(Order(100, 5, 'Neptun', 'buy'), self.teststock.orders['buy'])
-        self.assertNotIn(Order(100, 5, 'NPC', 'buy'), self.teststock.orders['buy'])
-        self.assertNotIn(Order(100, 1, 'NPC', 'buy'), self.teststock.orders['buy'])
+        self.assertIn(Order('NPC', 'buy', 5, 'Teststock', 200), self.teststock.orders['buy'])
+        self.assertIn(Order('Neptun', 'buy', 5, 'Teststock', 100), self.teststock.orders['buy'])
+        self.assertNotIn(Order('NPC', 'buy', 5, 'Teststock', 100), self.teststock.orders['buy'])
+        self.assertNotIn(Order('NPC', 'buy', 1, 'Teststock', 100), self.teststock.orders['buy'])
         print('test_add_order passed.')
 
     def test_add_buy_order(self):
@@ -191,10 +192,10 @@ class TestStock(unittest.TestCase):
         print('test_list_player_buy_orders passed.')
 
     def test_list_similar_player_buy_order(self):
-        existing_order = Order(100, 5, 'NPC', 'buy')
-        existing_order2 = Order(200, 5, 'NPC', 'buy')
-        existing_order3 = Order(100, 5, 'Neptun', 'buy')
-        new_order = Order(100, 1, 'NPC', 'buy')
+        existing_order = Order('NPC', 'buy', 5, 'IBM', 100)
+        existing_order2 = Order('NPC', 'buy', 5, 'IBM', 200)
+        existing_order3 = Order('Neptun', 'buy', 5, 'IBM', 100)
+        new_order = Order('NPC', 'buy', 1, 'IBM', 100)
         self.teststock.add_order_to_escrow(existing_order)
         self.assertIn(existing_order, self.teststock.orders['buy'])
         self.teststock.add_order_to_escrow(existing_order2)
@@ -208,7 +209,7 @@ class TestStock(unittest.TestCase):
     def test_add_duplicate_buy_order(self):
         self.teststock.add_order_to_escrow(self.buyorder)
         self.teststock.add_order_to_escrow(self.buyorder)
-        duplicate_order = Order(100, 2, 'NPC', 'buy')
+        duplicate_order = Order('NPC', 'buy', 2, 'Teststock', 100)
         self.assertIn(duplicate_order, self.teststock.orders['buy'])
         self.assertTrue(len(self.teststock.orders['buy']) == 1)
         print('test_add_duplicate_buy_orders passed.')
@@ -222,7 +223,7 @@ class TestStock(unittest.TestCase):
         print('test_cancel_order passed.')
 
     def test_add_1337_similar_orders(self):
-        bigorder = Order(100, 1337, 'NPC', 'buy')
+        bigorder = Order('NPC', 'buy', 1337, 'Teststock', 100)
         for i in range(1337):
             self.teststock.add_order_to_escrow(self.buyorder)
         self.assertIn(bigorder, self.teststock.orders['buy'])
@@ -254,27 +255,27 @@ class TestStock(unittest.TestCase):
         print('test_update_low_high_price passed.')
 
     def test_match_orders(self):
+        # todo
         # todo add Player class instance, to test credit/portfolio updates,
         # or maybe have that part in a different test/class
-        teststock = Stock('testStock', 1000)
-        self.assertEqual(teststock.price, 1000)
-        buyorder = Order(900, 1, 'NPC', 'buy')
-        sellorder = Order(1100, 1, 'NPC', 'sell')
-        teststock.add_order_to_escrow(buyorder)
-        teststock.add_order_to_escrow(sellorder)
-        teststock.match_orders()
-        self.assertIn(buyorder, teststock.orders['buy'])
-        self.assertIn(sellorder, teststock.orders['sell'])
-        teststock.price = 900
-        self.assertEqual(teststock.price, 900)
-        teststock.match_orders()
-        self.assertNotIn(buyorder, teststock.orders['buy'])
-        self.assertIn(sellorder, teststock.orders['sell'])
-        teststock.price = 1100
-        self.assertEqual(teststock.price, 1100)
-        teststock.match_orders()
-        self.assertNotIn(buyorder, teststock.orders['buy'])
-        self.assertNotIn(sellorder, teststock.orders['sell'])
+        self.assertEqual(self.teststock.price, 1000)
+        buyorder = Order('NPC', 'buy', 1, 'Teststock', 900)
+        sellorder = Order('NPC', 'sell', 1, 'Teststock', 1100)
+        self.teststock.add_order_to_escrow(buyorder)
+        self.teststock.add_order_to_escrow(sellorder)
+        self.teststock.match_orders()
+        self.assertIn(buyorder, self.teststock.orders['buy'])
+        self.assertIn(sellorder, self.teststock.orders['sell'])
+        self.teststock.price = 900
+        self.assertEqual(self.teststock.price, 900)
+        self.teststock.match_orders()
+        self.assertNotIn(buyorder, self.teststock.orders['buy'])
+        self.assertIn(sellorder, self.teststock.orders['sell'])
+        self.teststock.price = 1100
+        self.assertEqual(self.teststock.price, 1100)
+        self.teststock.match_orders()
+        self.assertNotIn(buyorder, self.teststock.orders['buy'])
+        self.assertNotIn(sellorder, self.teststock.orders['sell'])
         print('test_match_orders passed.')
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 __author__ = 'NeptunDK'
 import unittest
-from helpers import Order, Share
+from helpers import Order
 import logging
-from operator import itemgetter, attrgetter
+from operator import attrgetter
 
 
 class Player:  # could also be called wallet, then a player/firm/company/bot could have a wallet
@@ -11,55 +11,59 @@ class Player:  # could also be called wallet, then a player/firm/company/bot cou
         self.name = name
         self.description = description
         self.credit = starting_credits
-        self.portfolio = []  # Share = namedtuple('Share', ['stockname', 'vol', 'buyprice'])
-        self.networth = None
+        self.portfolio = []
+        self.networth = self.credit
         self.salary = 5000
+
+    def __repr__(self):
+        return f"{self.name} has {self.credit} GladCoins, and is worth {self.networth}."
 
     def add_salary(self):
         # is it safe to have this here?
         self.credit += self.salary
+        self.networth += self.salary
 
-    def add_share_to_portfolio(self, share):
-        similar_share = self.list_similar_share(share)
+    def add_to_portfolio(self, order):
+        similar = self.list_similar(order)
 
-        if not similar_share:
-            self.portfolio.append(share)
+        if not similar:
+            self.portfolio.append(order)
         else:
-            new_volume = similar_share[0].vol + share.vol
-            updated_share = Share(share.stockname, new_volume, share.buyprice)
-            self.portfolio.remove(similar_share[0])
-            self.portfolio.append(updated_share)
-            logging.info(f"New order: {share} combined with old share: {similar_share[0]} into: {updated_share}.")
+            new_volume = similar[0].vol + order.vol
+            updated_order = Order(order.player, order.order_type, new_volume, order.stockname, order.price)
+            self.portfolio.remove(similar[0])
+            self.portfolio.append(updated_order)
+            logging.info(f"New order: {order} combined with old: {similar[0]} into: {updated_order}.")
 
-    def remove_shares_from_portfolio(self, share):
-        if share in self.portfolio:
-            self.portfolio.remove(share)
-            logging.info(f"{share} removed from portfolio.")
+    def remove_from_portfolio(self, order):
+        if order in self.portfolio:
+            self.portfolio.remove(order)
+            logging.info(f"{order} removed from portfolio.")
         else:
-            similar_share = self.list_similar_share(share)[0]
-            newshare = Share(share.stockname, similar_share.vol - share.vol, share.buyprice)
-            self.portfolio[self.portfolio.index(similar_share)] = newshare
-            logging.info(f"{similar_share} updated to {newshare} in portfolio.")
+            similar = self.list_similar(order)[0]
+            neworder = Order(order.player, order.order_type, similar.vol - order.vol, order.stockname, order.price)
+            self.portfolio[self.portfolio.index(similar)] = neworder
+            logging.info(f"{similar} updated to {neworder} in portfolio.")
 
-    def list_similar_share(self, share):
+    def list_similar(self, order):
         return [match for match in self.portfolio
-                if (match.stockname == share.stockname) and (match.buyprice == share.buyprice)]
+                if (match.stockname == order.stockname) and (match.price == order.price)]
 
     def sort_portfolio(self):
         self.portfolio = sorted(self.portfolio, key=attrgetter('vol'), reverse=True)  # secondary key
         self.portfolio = sorted(self.portfolio, key=attrgetter('stockname',))  # primary key
 
     def flatten_portfolio(self):
-        # Ignores buyprice of shares to remove clutter
+        # Ignores price to remove clutter
         new_portfolio = self.portfolio
         self.portfolio = []
 
-        for share in new_portfolio:
-            self.add_share_to_portfolio(Share(share.stockname, share.vol, 0))
+        for order in new_portfolio:
+            self.add_to_portfolio(Order(order.player, order.order_type, order.vol, order.stockname, 0))
 
-    def list_shares(self):
-        # todo sort? list_shares(self, sortkey=None)
-        # todo list number of shares list_shares(self, amount=None)
+    def list_portfolio(self):
+        # todo sort? (self, sortkey=None)
+        # todo support amount?(self, amount=None)
         return self.portfolio
 
     # sell stocks/shares
@@ -78,9 +82,7 @@ class Player:  # could also be called wallet, then a player/firm/company/bot cou
 class TestPlayer(unittest.TestCase):
     def setUp(self):
         self.testplayer = Player('Player1', 10000, 'Is only a test.')
-        self.testshare = Share("Teststock", 1, 100)
-        self.buyorder = Order(100, 1, 'Player1', 'buy')
-        self.sellorder = Order(100, 1, 'Player1', 'sell')
+        self.buyorder = Order('player1', 'buy', 1, 'Teststock', 100)
 
     def test_player(self):
         self.assertEqual(self.testplayer.name, 'Player1')
@@ -96,84 +98,84 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.testplayer.credit, 19000)
         print('test_add_sallery passed.')
 
-    def test_add_shares_to_portfolio(self):
+    def test_add_to_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.testshare)
-        self.assertIn(self.testshare, self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.testshare)
-        testcombinedshares = Share('Teststock', 2, 100)
-        self.assertIn(testcombinedshares, self.testplayer.portfolio)
-        print('test_add_shares_to_portfolio passed.')
+        self.testplayer.add_to_portfolio(self.buyorder)
+        self.assertIn(self.buyorder, self.testplayer.portfolio)
+        self.testplayer.add_to_portfolio(self.buyorder)
+        combined = Order('player1', 'buy', 2, 'Teststock', 100)
+        self.assertIn(combined, self.testplayer.portfolio)
+        print('test_add_to_portfolio passed.')
 
-    def test_add_shares_to_portfolio2(self):
+    def test_add_to_portfolio2(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 8, 1000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 5000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 8, 'DELL', 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 5000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 1000))
         print('name')
         print(self.testplayer.portfolio)
-        self.assertIn(Share(stockname='DELL', vol=10, buyprice=1000), self.testplayer.portfolio)
-        self.assertIn(Share(stockname='DELL', vol=1, buyprice=5000), self.testplayer.portfolio)
-        print('test_add_shares_to_portfolio2 passed.')
+        self.assertIn(Order('player1', 'buy', 10, 'DELL', 1000), self.testplayer.portfolio)
+        self.assertIn(Order('player1', 'buy', 1, 'DELL', 5000), self.testplayer.portfolio)
+        print('test_add_to_portfolio2 passed.')
 
-    def test_list_similar_share(self):
+    def test_list_similar(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.portfolio.append(self.testshare)
-        self.assertIn(self.testshare, self.testplayer.portfolio)
-        self.assertEqual([self.testshare], self.testplayer.list_similar_share(self.testshare))
-        print('test_list_similar_share passed.')
+        self.testplayer.portfolio.append(self.buyorder)
+        self.assertIn(self.buyorder, self.testplayer.portfolio)
+        self.assertEqual([self.buyorder], self.testplayer.list_similar(self.buyorder))
+        print('test_list_similar passed.')
 
-    def test_remove_shares_from_portfolio(self):
+    def test_remove_from_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.testshare)
-        self.assertIn(self.testshare, self.testplayer.portfolio)
-        self.testplayer.remove_shares_from_portfolio(self.testshare)
-        self.assertNotIn(self.testshare, self.testplayer.portfolio)
-        testcombinedshares = Share('Teststock', 2, 100)
-        self.testplayer.add_share_to_portfolio(testcombinedshares)
-        self.assertIn(testcombinedshares, self.testplayer.portfolio)
-        self.testplayer.remove_shares_from_portfolio(self.testshare)
-        self.assertIn(self.testshare, self.testplayer.portfolio)
-        print('test_remove_shares_from_portfolio passed.')
+        self.testplayer.add_to_portfolio(self.buyorder)
+        self.assertIn(self.buyorder, self.testplayer.portfolio)
+        self.testplayer.remove_from_portfolio(self.buyorder)
+        self.assertNotIn(self.buyorder, self.testplayer.portfolio)
+        combined = Order('player1', 'buy', 2, 'Teststock', 100)
+        self.testplayer.add_to_portfolio(combined)
+        self.assertIn(combined, self.testplayer.portfolio)
+        self.testplayer.remove_from_portfolio(self.buyorder)
+        self.assertIn(self.buyorder, self.testplayer.portfolio)
+        print('test_remove_from_portfolio passed.')
 
-    def test_list_shares(self):
+    def test_list_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(self.testshare)
-        self.assertIn(self.testshare, self.testplayer.portfolio)
-        print(self.testplayer.list_shares()[0])
-        print('test_list_shares passed.')
+        self.testplayer.add_to_portfolio(self.buyorder)
+        self.assertIn(self.buyorder, self.testplayer.portfolio)
+        print(self.testplayer.list_portfolio()[0])
+        print('test_list_portfolio passed.')
 
     def test_sort_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(Share('IMB', 3, 150))
-        self.testplayer.add_share_to_portfolio(Share('IMB', 2, 75))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 8, 1000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 5000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
-        self.assertIn(Share(stockname='IMB', vol=3, buyprice=150), self.testplayer.portfolio)
-        self.assertIn(Share(stockname='IMB', vol=2, buyprice=75), self.testplayer.portfolio)
-        self.assertIn(Share(stockname='DELL', vol=10, buyprice=1000), self.testplayer.portfolio)
-        self.assertIn(Share(stockname='DELL', vol=1, buyprice=5000), self.testplayer.portfolio)
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 3, 'IBM', 150))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 2, 'IBM', 75))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 8, 'DELL', 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 5000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 1000))
+        self.assertIn(Order('player1', 'buy', 3, 'IBM', 150), self.testplayer.portfolio)
+        self.assertIn(Order('player1', 'buy', 2, 'IBM', 75), self.testplayer.portfolio)
+        self.assertIn(Order('player1', 'buy', 10, 'DELL', 1000), self.testplayer.portfolio)
+        self.assertIn(Order('player1', 'buy', 1, 'DELL', 5000), self.testplayer.portfolio)
         self.testplayer.sort_portfolio()
-        self.assertEqual([Share(stockname='DELL', vol=10, buyprice=1000),
-                          Share(stockname='DELL', vol=1, buyprice=5000),
-                          Share(stockname='IMB', vol=3, buyprice=150),
-                          Share(stockname='IMB', vol=2, buyprice=75)], self.testplayer.portfolio)
+        self.assertEqual([Order('player1', 'buy', 10, 'DELL', 1000),
+                          Order('player1', 'buy', 1, 'DELL', 5000),
+                          Order('player1', 'buy', 3, 'IBM', 150),
+                          Order('player1', 'buy', 2, 'IBM', 75)], self.testplayer.portfolio)
         print('test_sort_portfolio passed.')
 
     def test_flatten_portfolio(self):
         self.assertEqual([], self.testplayer.portfolio)
-        self.testplayer.add_share_to_portfolio(Share('IMB', 3, 150))
-        self.testplayer.add_share_to_portfolio(Share('IMB', 2, 75))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 8, 1000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 5000))
-        self.testplayer.add_share_to_portfolio(Share('DELL', 1, 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 3, 'IBM', 150))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 2, 'IBM', 75))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 8, 'DELL', 1000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 5000))
+        self.testplayer.add_to_portfolio(Order('player1', 'buy', 1, 'DELL', 1000))
         self.testplayer.flatten_portfolio()
-        self.assertIn(Share(stockname='DELL', vol=11, buyprice=0), self.testplayer.portfolio)
-        self.assertIn(Share(stockname='IMB', vol=5, buyprice=0), self.testplayer.portfolio)
+        self.assertIn(Order('player1', 'buy', 11, 'DELL', 0), self.testplayer.portfolio)
+        self.assertIn(Order('player1', 'buy', 5, 'IBM', 0), self.testplayer.portfolio)
         print('test_flatten_portfolio passed.')
 
 if __name__ == '__main__':
