@@ -91,6 +91,13 @@ class TestPlayer(unittest.TestCase):
         self.assertListEqual(self.testplayer.portfolio, [])
         print('test_player passed.')
 
+    def test___repr__(self):
+        print(self.testplayer)
+        self.assertEqual(f'{self.testplayer.name} has {self.testplayer.credit} GladCoins, '
+                         f'and is worth {self.testplayer.networth}.', repr(self.testplayer))
+        print('test___repr__ passed.')
+
+
     def test_add_sallery(self):
         self.testplayer.add_salary()
         self.assertEqual(self.testplayer.credit, 15000)
