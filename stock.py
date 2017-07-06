@@ -2,7 +2,8 @@
 __author__ = 'NeptunDK'
 import unittest
 import logging
-from helpers import Order
+from helpers import Order, gen_random_order
+import random
 
 
 class Stock:
@@ -20,7 +21,7 @@ class Stock:
     def place_order(self, order):
         if order.order_type == 'buy' and self.price <= order.price:
             logging.info(f"{order.player} bought {order.vol} shares of {self.name} "
-                            f"for a price of {order.vol * order.price}.")
+                            f"for a price of {order.price} each, total of {order.vol * order.price}.")
             return True
         elif order.order_type == 'sell' and self.price >= order.price:
             logging.info(f"{order.player} sold {order.vol} shares of {self.name} "
@@ -70,15 +71,18 @@ class Stock:
             if buy_order.price >= self.price:
                 logging.info(f"{buy_order} matched price of: {self.price}")
                 matched_orders.append(buy_order)
-                self.orders['buy'].remove(buy_order)
 
         # sell orders matching current stock price or lower
         for sell_order in self.orders['sell']:
             if sell_order.price <= self.price:
                 logging.info(f"{sell_order} matched price of: {self.price}")
                 matched_orders.append(sell_order)
-                self.orders['sell'].remove(sell_order)
 
+        for order in matched_orders:
+            if order.order_type == 'buy' and order in self.orders['buy']:
+                self.orders['buy'].remove(order)
+            if order.order_type == 'sell' and order in self.orders['sell']:
+                self.orders['sell'].remove(order)
         return matched_orders  # todo update player credit/portfolio
 
     def cancel_order(self, order):
@@ -278,6 +282,43 @@ class TestStock(unittest.TestCase):
         self.assertNotIn(sellorder, self.teststock.orders['sell'])
         print('test_match_orders passed.')
 
+    def test_match_orders_sellorders_not_empty(self):
+        random.seed(1337)  # really important!
+        teststock = Stock('DELL', 9)
+
+        for e in range(14):
+            teststock.place_order(gen_random_order(stockname=teststock.name))
+
+        self.assertIn(Order(player='NPC', order_type='sell', vol=10, stockname='DELL', price=10),
+                      teststock.list_sell_orders())
+
+        self.assertIn(Order(player='Player2', order_type='sell', vol=1, stockname='DELL', price=10),
+                      teststock.list_sell_orders())
+
+        teststock.price = 10
+        self.assertEqual(teststock.price, 10)
+        teststock.match_orders()
+        self.assertNotIn(Order(player='Player2', order_type='sell', vol=1, stockname='DELL', price=10), teststock.list_sell_orders())
+        # print('buy10:', teststock.orders)
+
+        teststock.price = 7
+        self.assertEqual(teststock.price, 7)
+        teststock.match_orders()
+        self.assertIn(Order(player='NPC', order_type='buy', vol=6, stockname='DELL', price=2), teststock.orders['buy'])
+        # print('buy7', teststock.orders)
+
+        teststock.price = 4
+        self.assertEqual(teststock.price, 4)
+        teststock.match_orders()
+        self.assertIn(Order(player='NPC', order_type='buy', vol=6, stockname='DELL', price=2), teststock.orders['buy'])
+        # print('buy4', teststock.orders)
+
+        teststock.price = 2
+        self.assertEqual(teststock.price, 2)
+        teststock.match_orders()
+        self.assertNotIn(Order(player='NPC', order_type='buy', vol=6, stockname='DELL', price=2), teststock.orders['buy'])
+        # print('buy2', teststock.orders)
+        print('test_match_orders_sellorders_not_empty passed.')
 
 if __name__ == '__main__':
     unittest.main()
