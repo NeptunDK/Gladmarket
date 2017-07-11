@@ -30,7 +30,6 @@ def orders_mergable(order1, order2):
 
 class TestHelpers(unittest.TestCase):
     def setUp(self):
-        # todo
         self.buyorder = Order('NPC', 'buy', 1, 'Teststock', 100)
         self.buyorder_two = Order('NPC', 'buy', 1, 'Teststock', 1100)
         self.sellorder = Order('NPC', 'sell', 1, 'Teststock', 100)
@@ -41,9 +40,11 @@ class TestHelpers(unittest.TestCase):
         print('test_Order passed.')
 
     def test_gen_random_order(self):
-        # todo make test_Order unittest
+        random.seed(1337)
+        valid_1337 = Order(player='NPC', order_type='sell', vol=10, stockname='DELL', price=6)
+        self.assertEqual(valid_1337, gen_random_order())
+        self.assertNotEqual(self.sellorder, gen_random_order())
         print('test_gen_random_order passed.')
-
 
 if __name__ == '__main__':
     unittest.main()

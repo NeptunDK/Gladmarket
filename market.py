@@ -13,6 +13,10 @@ class Market:
         self.stocks = set()
         self.players = set()
 
+    def __repr__(self):
+        stocks = ', '.join(self.list_stocks())
+        return f"{self.name}: {stocks}"
+
     def update_networth(self, player):
         stocks_networth = sum(share.vol * stock.price for share in player.portfolio
                              for stock in self.stocks if share.stockname == stock.name)
@@ -47,12 +51,16 @@ class Market:
     # todo market fees?
 
 
-class TestStock(unittest.TestCase):
+class TestMarket(unittest.TestCase):
     def setUp(self):
         self.testmarket = Market('GladDAQ')
         self.testmarket.stocks.add(Stock('testStock', 1000))
         self.testmarket.stocks.add(Stock('IBM', 133))
         self.testplayer = Player('Player1')
+
+    def test___repr__(self):
+        self.assertEqual(repr(self.testmarket), 'GladDAQ: IBM @ 133, testStock @ 1000')
+        print('test___repr__ passed.')
 
     def test_list_stocks(self):
         self.assertIn('testStock @ 1000', self.testmarket.list_stocks())
@@ -76,6 +84,10 @@ class TestStock(unittest.TestCase):
         print(self.testplayer)
         self.testmarket.offer_bid()
         print('test_buy_shares passed.')
+
+    # def test_lotsoforders(self):
+    #     print(self.testmarket)
+    #     print('test_lotsoforders passed.')
 
 if __name__ == '__main__':
     unittest.main()
